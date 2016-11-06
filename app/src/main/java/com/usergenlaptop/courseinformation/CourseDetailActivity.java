@@ -23,7 +23,7 @@ public class CourseDetailActivity extends AppCompatActivity {
         courseDesc = (TextView) findViewById(R.id.course_detail_desc);
         courseSelected = getIntent().getStringExtra("courseSelected");
 
-        databaseHelper = new DatabaseHelper(this);
+        databaseHelper = DatabaseHelper.getInstance(this);
         getData(courseSelected);
     }
 

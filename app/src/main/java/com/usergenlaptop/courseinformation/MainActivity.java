@@ -30,7 +30,7 @@ public class MainActivity extends ListActivity {
 
         //Initialize
         terms = new ArrayList<>();
-        databaseHelper = new DatabaseHelper(this);
+        databaseHelper = DatabaseHelper.getInstance(this);
         initializeDB();
         getData();
 

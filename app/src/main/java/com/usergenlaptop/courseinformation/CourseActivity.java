@@ -29,7 +29,7 @@ public class CourseActivity extends ListActivity {
         //Init
         courses = new ArrayList<>();
         termSelected = getIntent().getStringExtra("termSelected");
-        databaseHelper = new DatabaseHelper(this);
+        databaseHelper = DatabaseHelper.getInstance(this);
 
         getData(termSelected);
 
