@@ -1,18 +1,42 @@
 package com.usergenlaptop.courseinformation;
 
 import android.app.ListActivity;
+import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.koushikdutta.async.future.FutureCallback;
+import com.koushikdutta.ion.Ion;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
 import java.util.ArrayList;
 
 public class MainActivity extends ListActivity {
@@ -24,9 +48,12 @@ public class MainActivity extends ListActivity {
     private DatabaseHelper          databaseHelper;
     private ArrayList<String>       terms;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        jsonRequest();
 
         //Initialize
         terms = new ArrayList<>();
@@ -88,12 +115,22 @@ public class MainActivity extends ListActivity {
 
     private void initializeDB() {
         //Show all tables in current database
-        showTables();
+        //ShowTables();
+
+        //Drop Table in current DB
+        //dropTable();
+
         //Check if table is already initalized
-        if(verifyDBPopulated() == 0) {
-            bulkInsert();
-        }
-        Log.d("X", "Num of rows:" + verifyDBPopulated());
+        //(verifyDBPopulated() == 0) {
+        bulkInsert();
+        //
+        //Log.d("X", "Num of rows:" + verifyDBPopulated());
+    }
+
+    private void dropTable() {
+        db = databaseHelper.getReadableDatabase();
+        db.execSQL("DROP TABLE IF EXISTS " + DatabaseHelper.Course.TABLE_NAME);
+        db.close();
     }
 
     public void showTables() {
@@ -116,19 +153,20 @@ public class MainActivity extends ListActivity {
         return count;
     }
 
+
     private void bulkInsert() {
         // Instantiate subclass of SQLiteOpenHelper
         db = databaseHelper.getWritableDatabase();
 
         // Create a new map of values, where column names are the keys
-        for (int i = 0; i < courseLabel.length; i++) {
+        for (int i = 0; i < courseLabel.size(); i++) {
             try {
                 db.beginTransaction();
                 ContentValues values = new ContentValues();
-                values.put(DatabaseHelper.Course.COURSE_LABEL, courseLabel[i]);
-                values.put(DatabaseHelper.Course.TERM, insertTerm(i));
-                values.put(DatabaseHelper.Course.COURSE_NAME, courseName[i]);
-                values.put(DatabaseHelper.Course.COURSE_DESCRIPTION, courseDescription[i]);
+                values.put(DatabaseHelper.Course.COURSE_LABEL, courseLabel.get(i));
+                values.put(DatabaseHelper.Course.TERM, courseTerms.get(i));
+                values.put(DatabaseHelper.Course.COURSE_NAME, courseName.get(i));
+                values.put(DatabaseHelper.Course.COURSE_DESCRIPTION, courseDescription.get(i));
                 db.insertOrThrow(DatabaseHelper.Course.TABLE_NAME, null, values);
                 db.setTransactionSuccessful();
             } catch (IllegalStateException e) {
@@ -140,6 +178,7 @@ public class MainActivity extends ListActivity {
         db.close();
     }
 
+/*
     private int insertTerm(int count) {
         int term = 0;
         if(count < 7) {
@@ -235,4 +274,72 @@ public class MainActivity extends ListActivity {
             "This course provides the students with an opportunity to develop a software application that works across the internet. An overview of various internet software development technologies is provided. Students will learn how to build a web application using a modern webapp MVC framework and Apache server technology; and how to use XML for data representation, structure and transport. Prerequisites: COMP 2510 or COMP 2526",
             "This course is for students who have a special interest in database technology. Topics include: database transactions, concurrency control and recovery techniques in multi-user database systems, database security, distributed databases, and current trends in database technologies. Students will use common industry database software products such as Microsoft SQL Server and/or Oracle DBMSs. Database application development emphasizes the use of Oracle tools, including PL/SQL, Embedded SQL using Pro*C, Java JDBC using JDeveloper, and an introduction to Oracle ADF Development. Prerequisites: COMP 3920"
     };
+
+    */
+
+    private ArrayList<String> courseDescription = new ArrayList<>();
+    private ArrayList<String> courseName = new ArrayList<>();
+    private ArrayList<String> courseLabel = new ArrayList<>();
+    private ArrayList<String> courseTerms = new ArrayList<>();
+
+    public void jsonRequest()
+    {
+        Ion.with(this).
+            load("http://max.bcit.ca/comp.json").
+            asJsonObject().
+            setCallback(
+                new FutureCallback<JsonObject>()
+                {
+                    @Override
+                    public void onCompleted(final Exception ex,
+                                            final JsonObject obj)
+                    {
+                        if(ex != null)
+                        {
+                            Toast.makeText(MainActivity.this,
+                                    "Error: " + ex.getMessage(),
+                                    Toast.LENGTH_LONG).show();
+                        }
+                        else
+                        {
+                            final JsonObject    json;
+                            final JsonArray     jsonTermsArray;
+
+                            jsonTermsArray = obj.getAsJsonArray("terms");
+
+                            for(final JsonElement element : jsonTermsArray)
+                            {
+                                final JsonObject  jsonTermsObj;
+                                final JsonArray   jsonClassesArray;
+
+                                jsonTermsObj = element.getAsJsonObject();
+                                String term = jsonTermsObj.get("term").toString();
+
+                                jsonClassesArray = jsonTermsObj.get("classes").getAsJsonArray();
+                                for(final JsonElement elementClasses : jsonClassesArray)
+                                {
+                                    final JsonObject  jsonClassesObj;
+                                    String id;
+                                    String name;
+                                    String description;
+
+                                    jsonClassesObj = elementClasses.getAsJsonObject();
+
+                                    id = jsonClassesObj.get("id").toString();
+                                    name = jsonClassesObj.get("name").toString();
+                                    description = jsonClassesObj.get("description").toString();
+
+                                    courseTerms.add(term);
+                                    courseLabel.add(id);
+                                    courseName.add(name);
+                                    courseDescription.add(description);
+
+                                    //Log.d("@@@", id);
+                                }
+                            }
+                        }
+                    }
+                });
+    }
 }
+
