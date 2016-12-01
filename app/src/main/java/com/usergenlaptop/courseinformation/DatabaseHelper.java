@@ -4,6 +4,7 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
+import android.util.Log;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -40,7 +41,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         public static final String     COURSE_NAME             = "COURSE_NAME";
         public static final String     COURSE_DESCRIPTION      = "COURSE_DESCRIPTION";
     }
-    private static final String     SQL_CREATE_COURSE =
+    protected static final String      SQL_CREATE_COURSE =
             "CREATE TABLE IF NOT EXISTS "                                                     +
                     Course.TABLE_NAME                                                         +
                     " ("                                                                      +
@@ -63,7 +64,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL(SQL_CREATE_COURSE);
+
+        //db.execSQL(SQL_CREATE_COURSE);
     }
 
     @Override
